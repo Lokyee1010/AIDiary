@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI心情树洞</title>
+<style>
+  :root {
+    --bg: #F9F7F5;
+    --primary: #7C6E8F;
+    --primary-dark: #6A5E7A;
+    --accent: #8B9DC3;
+    --text: #2D2D2D;
+    --text-light: #5A5A5A;
+    --text-muted: #8A8A8A;
+    --card-bg: #fff;
+    --card-bg-warm: #FDFCFB;
+    --border: #E8E4E0;
+    --radius: 24px;
+    --shadow: 0 4px 24px rgba(124,110,143,.08);
+    --shadow-hover: 0 8px 32px rgba(124,110,143,.14);
+    --shadow-modal: 0 20px 60px rgba(50,60,90,.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+                 "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.6;
+  }
+
+  /* ---- 导航 ---- */
+  .top-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,.04);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+  }
+  .nav-inner {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+  }
+  .brand {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-icon {
+    font-size: 20px;
+  }
+
+  /* ---- 主布局 ---- */
+  .main-layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 80px 24px 40px;
+  }
+
+  /* ---- 卡片 ---- */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-hover);
+  }
+  .card-header { margin-bottom: 20px; }
+  .card h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 14px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* ---- 表单 ---- */
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    background: var(--card-bg-warm);
+    color: var(--text);
+  }
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139,157,195,.15);
+    background: #fff;
+  }
+  textarea::placeholder { color: #B5B0AA; }
+
+  button {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .2s, transform .15s ease, box-shadow .2s;
+    letter-spacing: .3px;
+  }
+  button:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124,110,143,.25);
+  }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ---- 回复 ---- */
+  .reply {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--card-bg-warm);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    min-height: 28px;
+    transition: opacity .2s;
+    font-size: 14.5px;
+  }
+  .reply.empty { color: #B5B0AA; background: transparent; border: 1px dashed var(--border); }
+  .reply.error { border-left-color: #D47373; color: #A05050; background: #FDF5F5; }
+  .reply.loading { color: var(--text-muted); font-style: italic; }
+
+  /* ---- 右栏工具 ---- */
+  .tools-panel { display: flex; flex-direction: column; gap: 20px; }
+  .tool-card { padding: 22px 24px; }
+  .tool-card h3 { margin-bottom: 12px; }
+
+  /* 每日赋能 */
+  .quote-card {
+    background: linear-gradient(135deg, #F5F2F8 0%, #EEF1F7 100%);
+    border: 1px solid rgba(124,110,143,.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .quote-card::before {
+    content: '"';
+    position: absolute;
+    top: -10px; right: 16px;
+    font-size: 72px;
+    color: rgba(124,110,143,.08);
+    font-family: Georgia, serif;
+    line-height: 1;
+  }
+  .quote-text {
+    font-size: 14px;
+    color: var(--text-light);
+    line-height: 1.7;
+    font-style: italic;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 工具按钮 */
+  .tool-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--card-bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .2s;
+    margin-top: 0;
+    font-weight: 500;
+  }
+  .tool-btn:hover {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(139,157,195,.12);
+  }
+
+  /* 三件好事折叠 */
+  .tool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .chevron {
+    font-size: 11px;
+    color: var(--text-muted);
+    transition: transform .2s;
+  }
+  .tool-header.open .chevron { transform: rotate(180deg); }
+  .tool-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s ease, padding .35s ease;
+  }
+  .tool-body.open {
+    max-height: 500px;
+    padding-top: 12px;
+  }
+  .tool-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .date-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .date-bar input[type="date"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+  }
+  .chip {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-muted);
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+  }
+  .good-things {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .good-things textarea {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+
+  /* 历史记录 */
+  .history-section { margin-bottom: 16px; }
+  .history-section:last-child { margin-bottom: 0; }
+  .history-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 8px;
+  }
+  .history-item {
+    padding: 10px 12px;
+    background: var(--card-bg-warm);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    font-size: 13px;
+  }
+  .history-item:hover {
+    background: #F0EDEA;
+    transform: translateX(2px);
+  }
+  .history-item:last-child { margin-bottom: 0; }
+  .history-item-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .history-item-text {
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-empty {
+    font-size: 13px;
+    color: #B5B0AA;
+    padding: 8px 0;
+  }
+  .phq4-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .phq4-score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .badge-green { background: #8FB996; }
+  .badge-yellow { background: #D4A76A; }
+  .badge-orange { background: #C9846B; }
+  .badge-red { background: #B87070; }
+
+  /* Canvas 图表 */
+  .chart-wrap {
+    margin-top: 14px;
+    width: 100%;
+    height: 120px;
+    position: relative;
+  }
+  .chart-wrap canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .chart-placeholder {
+    font-size: 12px;
+    color: #B5B0AA;
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  /* ---- 弹窗 ---- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(45,45,45,.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: var(--shadow-modal);
+    padding: 28px;
+    animation: modalIn .25s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .modal-title { font-size: 18px; font-weight: 600; margin: 0; color: var(--text); }
+  .modal-close {
+    width: auto;
+    margin: 0;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-radius: 8px;
+    font-weight: 400;
+  }
+  .modal-close:hover { background: var(--card-bg-warm); color: var(--text); }
+
+  .phq4-intro {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  .phq4-question {
+    margin-bottom: 14px;
+    padding: 14px;
+    background: var(--card-bg-warm);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .phq4-qtext {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  .phq4-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .phq4-option {
+    position: relative;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 120px;
+  }
+  .phq4-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .phq4-option label {
+    display: block;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text-light);
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    background: #fff;
+  }
+  .phq4-option input:checked + label {
+    border-color: var(--primary);
+    background: #F5F2F8;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .phq4-option label:hover { border-color: var(--accent); }
+
+  .phq4-result {
+    margin-top: 18px;
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--card-bg-warm);
+    border-left: 3px solid var(--accent);
+    display: none;
+  }
+  .phq4-result.open { display: block; }
+  .phq4-score {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+    letter-spacing: -1px;
+  }
+  .phq4-tier {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .phq4-advice {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-light);
+  }
+  .phq4-ai {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--primary);
+    font-style: italic;
+  }
+  .phq4-hotline {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #FDF5F5;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #A05050;
+    line-height: 1.5;
+  }
+  .phq4-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .phq4-actions button {
+    flex: 1;
+    margin-top: 0;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .phq4-actions .btn-secondary {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid var(--border);
+  }
+  .phq4-actions .btn-secondary:hover {
+    background: var(--card-bg-warm);
+    border-color: var(--accent);
+  }
+  .phq4-disclaimer {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: #B5B0AA;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* 历史详情弹窗 */
+  .history-detail-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .history-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin: 16px 0 6px;
+  }
+  .history-detail-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-light);
+    background: var(--card-bg-warm);
+    padding: 14px;
+    border-radius: 12px;
+    white-space: pre-wrap;
+  }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    opacity: 0;
+    background: var(--text);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+    z-index: 200;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  .toast.success { background: #5A8F6E; }
+  .toast.error { background: #B87070; }
+
+  /* ---- 页脚 ---- */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: #B5B0AA;
+    line-height: 1.7;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ---- 移动端 ---- */
+  @media (max-width: 768px) {
+    .main-layout {
+      grid-template-columns: 1fr;
+      padding: 72px 16px 32px;
+      gap: 16px;
+    }
+    .card { padding: 20px; border-radius: 20px; }
+    .card h2 { font-size: 20px; }
+    .modal-card { padding: 20px; border-radius: 16px; }
+    .phq4-option { flex: 1 1 100%; }
+    .history-item:hover { transform: none; }
+    .nav-inner { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="brand-icon">🌱</span> AI心情树洞</div>
+  </div>
+</nav>
+
+<main class="main-layout">
+  <!-- 左栏：日记 -->
+  <section class="journal-panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>写日记</h2>
+        <p class="subtitle">把心里的话写下来，让它在这里被听见</p>
+      </div>
+      <textarea id="input" placeholder="今天发生了什么？写下你正在想的、感受到的……"></textarea>
+      <button id="send">倾诉</button>
+      <div id="reply" class="reply empty">AI 的回应会出现在这里</div>
+    </div>
+  </section>
+
+  <!-- 右栏：工具面板 -->
+  <aside class="tools-panel">
+    <!-- 每日赋能 -->
+    <div class="card tool-card quote-card">
+      <p class="quote-text" id="daily-quote"></p>
+    </div>
+
+    <!-- 心理健康小工具 -->
+    <div class="card tool-card">
+      <h3>心理健康小工具</h3>
+      <button class="tool-btn" id="btn-phq4" type="button">📋 PHQ-4 快速筛查</button>
+      <div class="chart-wrap">
+        <canvas id="phq4-chart"></canvas>
+      </div>
+      <div id="phq4-recent"></div>
+    </div>
+
+    <!-- 三件好事 -->
+    <div class="card tool-card">
+      <div class="tool-header" id="good-things-toggle">
+        <span>✨ 三件好事</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="tool-body" id="good-things-body">
+        <p class="tool-desc">不需要多大，"中午的阳光""一杯热茶"都算数。</p>
+        <div class="date-bar">
+          <input type="date" id="good-date">
+          <button class="chip" id="good-today" type="button">回到今天</button>
+        </div>
+        <div class="good-things">
+          <textarea data-slot="0" placeholder="第 1 件好事…"></textarea>
+          <textarea data-slot="1" placeholder="第 2 件好事…"></textarea>
+          <textarea data-slot="2" placeholder="第 3 件好事…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div class="card tool-card">
+      <h3>📋 历史记录</h3>
+      <div class="history-section">
+        <div class="history-subtitle">最近日记</div>
+        <div id="journal-history-list"></div>
+      </div>
+      <div class="history-section">
+        <div class="history-subtitle">PHQ-4 筛查</div>
+        <div id="phq4-history-list"></div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- PHQ-4 弹窗 -->
+<div class="modal-overlay" id="phq4-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title">📋 PHQ-4 快速筛查</h2>
+      <button class="modal-close" id="phq4-modal-close" type="button">关闭</button>
+    </div>
+    <p class="phq4-intro">以下 4 个问题帮助你了解过去两周的情绪状态。请选择最符合你情况的选项。</p>
+
+    <div id="phq4-questions">
+      <div class="phq4-question" data-q="0">
+        <p class="phq4-qtext">1. 过去两周内，你是否感到紧张、焦虑或烦躁？</p>
+        <div class="phq4-options">
+          <div class="phq4-option"><input type="radio" name="q0" id="q0-0" value="0"><label for="q0-0">完全没有</label></div>
+          <div class="phq4-option"><input type="radio" name="q0" id="q0-1" value="1"><label for="q0-1">有几天</label></div>
+          <div class="phq4-option"><input type="radio" name="q0" id="q0-2" value="2"><label for="q0-2">超过一半天数</label></div>
+          <div class="phq4-option"><input type="radio" name="q0" id="q0-3" value="3"><label for="q0-3">几乎每天</label></div>
+        </div>
+      </div>
+      <div class="phq4-question" data-q="1">
+        <p class="phq4-qtext">2. 过去两周内，你是否无法停止或控制担忧？</p>
+        <div class="phq4-options">
+          <div class="phq4-option"><input type="radio" name="q1" id="q1-0" value="0"><label for="q1-0">完全没有</label></div>
+          <div class="phq4-option"><input type="radio" name="q1" id="q1-1" value="1"><label for="q1-1">有几天</label></div>
+          <div class="phq4-option"><input type="radio" name="q1" id="q1-2" value="2"><label for="q1-2">超过一半天数</label></div>
+          <div class="phq4-option"><input type="radio" name="q1" id="q1-3" value="3"><label for="q1-3">几乎每天</label></div>
+        </div>
+      </div>
+      <div class="phq4-question" data-q="2">
+        <p class="phq4-qtext">3. 过去两周内，你是否对做事提不起兴趣或没有乐趣？</p>
+        <div class="phq4-options">
+          <div class="phq4-option"><input type="radio" name="q2" id="q2-0" value="0"><label for="q2-0">完全没有</label></div>
+          <div class="phq4-option"><input type="radio" name="q2" id="q2-1" value="1"><label for="q2-1">有几天</label></div>
+          <div class="phq4-option"><input type="radio" name="q2" id="q2-2" value="2"><label for="q2-2">超过一半天数</label></div>
+          <div class="phq4-option"><input type="radio" name="q2" id="q2-3" value="3"><label for="q2-3">几乎每天</label></div>
+        </div>
+      </div>
+      <div class="phq4-question" data-q="3">
+        <p class="phq4-qtext">4. 过去两周内，你是否感到情绪低落、抑郁或绝望？</p>
+        <div class="phq4-options">
+          <div class="phq4-option"><input type="radio" name="q3" id="q3-0" value="0"><label for="q3-0">完全没有</label></div>
+          <div class="phq4-option"><input type="radio" name="q3" id="q3-1" value="1"><label for="q3-1">有几天</label></div>
+          <div class="phq4-option"><input type="radio" name="q3" id="q3-2" value="2"><label for="q3-2">超过一半天数</label></div>
+          <div class="phq4-option"><input type="radio" name="q3" id="q3-3" value="3"><label for="q3-3">几乎每天</label></div>
+        </div>
+      </div>
+    </div>
+
+    <button id="phq4-submit">查看结果</button>
+
+    <div class="phq4-result" id="phq4-result">
+      <div class="phq4-score" id="phq4-score"></div>
+      <div class="phq4-tier" id="phq4-tier"></div>
+      <div class="phq4-advice" id="phq4-advice"></div>
+      <div class="phq4-ai" id="phq4-ai" style="display:none;"></div>
+      <div class="phq4-hotline" id="phq4-hotline" style="display:none;">
+        💡 心理援助热线：400-161-9995<br>
+        你不需要独自面对，寻求专业帮助是勇敢的选择。
+      </div>
+      <div class="phq4-actions">
+        <button class="btn-secondary" id="phq4-close-result" type="button">关闭</button>
+        <button id="phq4-save" type="button">记录结果</button>
+      </div>
+    </div>
+
+    <p class="phq4-disclaimer">
+      本工具仅用于自我了解，不能替代专业诊断。如有持续困扰，请寻求专业帮助。
+    </p>
+  </div>
+</div>
+
+<!-- 历史详情弹窗 -->
+<div class="modal-overlay" id="history-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title">📖 日记详情</h2>
+      <button class="modal-close" id="history-modal-close" type="button">关闭</button>
+    </div>
+    <div class="history-detail-date" id="history-detail-date"></div>
+    <div class="history-detail-label">我的心事</div>
+    <div class="history-detail-text" id="history-detail-message"></div>
+    <div class="history-detail-label">AI 的回应</div>
+    <div class="history-detail-text" id="history-detail-reply"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<footer>
+  基于认知行为疗法 (CBT) 与 PHQ-4 标准量表 &nbsp;|&nbsp; 所有数据私有存储，仅保存在你的浏览器中
+  <br>
+  本工具仅用于自我了解，不能替代专业诊断。如有持续困扰，请拨打心理援助热线 400-161-9995
+</footer>
+
+<script>
+/* ======================== 工具函数 ======================== */
+function fmtDate(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function fmtTime(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+/* ======================== 每日赋能 ======================== */
+const QUOTES = [
+  "你的想法不等于事实。",
+  "每一次觉察，都是改变的开始。",
+  "善待自己，就像善待一位好朋友。",
+  "情绪会来，也会走。你不必急于赶走它。",
+  "现在做不到的事，不代表以后也做不到。",
+  "深呼吸，给自己一点空间。",
+  "你已经做得很好了。",
+  "允许自己慢慢来。",
+  "今天的你，已经很勇敢了。",
+  "休息一下，不是放弃。"
+];
+document.getElementById('daily-quote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+
+/* ======================== 日记 ======================== */
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const replyEl = document.getElementById('reply');
+const JOURNAL_KEY = 'mood-hole.journal-history';
+
+function setReply(text, klass) {
+  replyEl.className = 'reply' + (klass ? ' ' + klass : '');
+  replyEl.textContent = text;
+}
+
+function saveJournal(entry) {
+  const arr = JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]');
+  arr.push(entry);
+  if (arr.length > 50) arr.shift();
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr));
+  renderJournalHistory();
+}
+
+async function send() {
+  const message = input.value.trim();
+  if (!message) { input.focus(); return; }
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'AI 正在倾听…';
+  setReply('正在认真听你说……', 'loading');
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    setReply(data.reply);
+    const now = new Date();
+    saveJournal({
+      id: Date.now(),
+      date: fmtDate(now),
+      time: fmtTime(now),
+      preview: message.slice(0, 30) + (message.length > 30 ? '…' : ''),
+      message,
+      reply: data.reply
+    });
+  } catch (e) {
+    setReply('出错了：' + e.message, 'error');
+    showToast('发送失败，请重试', 'error');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = '倾诉';
+  }
+}
+
+sendBtn.addEventListener('click', send);
+input.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
+});
+
+/* ======================== 历史记录面板 ======================== */
+function renderJournalHistory() {
+  const arr = JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]');
+  const container = document.getElementById('journal-history-list');
+  if (!arr.length) {
+    container.innerHTML = '<div class="history-empty">还没有日记记录</div>';
+    return;
+  }
+  container.innerHTML = arr.slice(-5).reverse().map(item => `
+    <div class="history-item" data-id="${item.id}">
+      <div class="history-item-time">${item.date} ${item.time}</div>
+      <div class="history-item-text">${item.preview}</div>
+    </div>
+  `).join('');
+  container.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = Number(el.dataset.id);
+      const item = arr.find(x => x.id === id);
+      if (item) openHistoryModal(item);
+    });
+  });
+}
+
+function openHistoryModal(item) {
+  document.getElementById('history-detail-date').textContent = `${item.date} ${item.time}`;
+  document.getElementById('history-detail-message').textContent = item.message;
+  document.getElementById('history-detail-reply').textContent = item.reply;
+  document.getElementById('history-modal').classList.add('open');
+}
+document.getElementById('history-modal-close').addEventListener('click', () => {
+  document.getElementById('history-modal').classList.remove('open');
+});
+document.getElementById('history-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('history-modal')) document.getElementById('history-modal').classList.remove('open');
+});
+
+function renderPhq4History() {
+  const arr = JSON.parse(localStorage.getItem('mood-hole.phq4-history') || '[]');
+  const container = document.getElementById('phq4-history-list');
+  const recentEl = document.getElementById('phq4-recent');
+
+  if (!arr.length) {
+    container.innerHTML = '<div class="history-empty">还没有筛查记录</div>';
+    recentEl.textContent = '';
+    return;
+  }
+
+  const last = arr[arr.length - 1];
+  recentEl.innerHTML = `<div style="margin-top:8px;font-size:12px;color:#8A8A8A;">上次筛查：${last.date} · 总分 ${last.score}</div>`;
+
+  const badgeClass = last.score <= 2 ? 'badge-green' : last.score <= 5 ? 'badge-yellow' : last.score <= 8 ? 'badge-orange' : 'badge-red';
+  container.innerHTML = arr.slice(-3).reverse().map(item => {
+    const bc = item.score <= 2 ? 'badge-green' : item.score <= 5 ? 'badge-yellow' : item.score <= 8 ? 'badge-orange' : 'badge-red';
+    return `
+      <div class="history-item phq4-history-item">
+        <div>
+          <div class="history-item-time">${item.date}</div>
+          <div class="history-item-text">${item.tier}</div>
+        </div>
+        <span class="phq4-score-badge ${bc}">${item.score}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ======================== PHQ-4 Canvas 折线图 ======================== */
+function drawPhq4Chart() {
+  const canvas = document.getElementById('phq4-chart');
+  const arr = JSON.parse(localStorage.getItem('mood-hole.phq4-history') || '[]');
+  const wrap = canvas.parentElement;
+
+  if (arr.length < 2) {
+    wrap.innerHTML = '<div class="chart-placeholder">完成 2 次以上筛查即可查看趋势</div>';
+    return;
+  }
+
+  // 恢复 canvas
+  if (!wrap.querySelector('canvas')) {
+    wrap.innerHTML = '';
+    wrap.appendChild(canvas);
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const padding = { top: 18, right: 20, bottom: 24, left: 28 };
+  const chartW = W - padding.left - padding.right;
+  const chartH = H - padding.top - padding.bottom;
+
+  const data = arr.slice(-7);
+  const maxScore = 12;
+
+  // 背景
+  ctx.clearRect(0, 0, W, H);
+
+  // 网格线
+  ctx.strokeStyle = '#E8E4E0';
+  ctx.lineWidth = 1;
+  [0, 3, 6, 9, 12].forEach(score => {
+    const y = padding.top + chartH - (score / maxScore) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(padding.left + chartW, y);
+    ctx.stroke();
+    ctx.fillStyle = '#B5B0AA';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(score), padding.left - 6, y + 3);
+  });
+
+  // 坐标映射
+  const points = data.map((item, i) => ({
+    x: padding.left + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW),
+    y: padding.top + chartH - (item.score / maxScore) * chartH,
+    score: item.score,
+    date: item.date.slice(5) // MM-DD
+  }));
+
+  // 折线
+  ctx.strokeStyle = '#7C6E8F';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.stroke();
+
+  // 区域填充
+  ctx.fillStyle = 'rgba(124,110,143,.08)';
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, padding.top + chartH);
+  points.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(points[points.length - 1].x, padding.top + chartH);
+  ctx.closePath();
+  ctx.fill();
+
+  // 数据点 + 标签
+  points.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#7C6E8F';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#7C6E8F';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(p.score), p.x, p.y - 10);
+
+    ctx.fillStyle = '#8A8A8A';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.date, p.x, padding.top + chartH + 14);
+  });
+}
+
+/* ======================== PHQ-4 筛查 ======================== */
+const phq4Modal = document.getElementById('phq4-modal');
+const phq4Result = document.getElementById('phq4-result');
+let phq4CurrentData = null;
+
+function openPhq4Modal() {
+  phq4Modal.classList.add('open');
+  phq4Result.classList.remove('open');
+  document.querySelectorAll('#phq4-questions input').forEach(r => r.checked = false);
+  document.getElementById('phq4-submit').style.display = 'block';
+  document.getElementById('phq4-hotline').style.display = 'none';
+}
+function closePhq4Modal() { phq4Modal.classList.remove('open'); }
+
+function calcPhq4Score() {
+  let s = 0;
+  for (let i = 0; i < 4; i++) {
+    const v = document.querySelector('input[name="q' + i + '"]:checked');
+    if (!v) return null;
+    s += Number(v.value);
+  }
+  return s;
+}
+
+async function submitPhq4() {
+  const score = calcPhq4Score();
+  if (score === null) { showToast('请先回答全部 4 个问题', 'error'); return; }
+  const btn = document.getElementById('phq4-submit');
+  btn.disabled = true;
+  btn.textContent = '分析中…';
+  try {
+    const res = await fetch('/phq4', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    phq4CurrentData = data;
+
+    document.getElementById('phq4-score').textContent = '总分 ' + data.score + ' / 12';
+    document.getElementById('phq4-tier').textContent = data.tier;
+    document.getElementById('phq4-advice').textContent = data.advice;
+
+    const aiEl = document.getElementById('phq4-ai');
+    if (data.ai_comfort) { aiEl.textContent = data.ai_comfort; aiEl.style.display = 'block'; }
+    else aiEl.style.display = 'none';
+
+    document.getElementById('phq4-hotline').style.display = data.score >= 6 ? 'block' : 'none';
+
+    phq4Result.classList.add('open');
+    btn.style.display = 'none';
+  } catch (e) {
+    showToast('获取结果失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '查看结果';
+  }
+}
+
+function savePhq4History(entry) {
+  const arr = JSON.parse(localStorage.getItem('mood-hole.phq4-history') || '[]');
+  arr.push(entry);
+  localStorage.setItem('mood-hole.phq4-history', JSON.stringify(arr));
+  renderPhq4History();
+  drawPhq4Chart();
+}
+
+document.getElementById('btn-phq4').addEventListener('click', openPhq4Modal);
+document.getElementById('phq4-modal-close').addEventListener('click', closePhq4Modal);
+document.getElementById('phq4-submit').addEventListener('click', submitPhq4);
+document.getElementById('phq4-close-result').addEventListener('click', closePhq4Modal);
+document.getElementById('phq4-save').addEventListener('click', () => {
+  if (phq4CurrentData) {
+    savePhq4History({
+      date: fmtDate(new Date()),
+      score: phq4CurrentData.score,
+      tier: phq4CurrentData.tier,
+      advice: phq4CurrentData.advice,
+    });
+    showToast('已记录到本地历史', 'success');
+    closePhq4Modal();
+  }
+});
+phq4Modal.addEventListener('click', (e) => {
+  if (e.target === phq4Modal) closePhq4Modal();
+});
+
+/* ======================== 三件好事 ======================== */
+function storageKey(dateStr) {
+  return 'mood-hole.good-things.' + dateStr;
+}
+function loadGoodThings(dateStr) {
+  const data = JSON.parse(localStorage.getItem(storageKey(dateStr)) || '[]');
+  document.querySelectorAll('.good-things textarea').forEach(ta => {
+    const slot = Number(ta.dataset.slot);
+    ta.value = (data[slot] || '');
+  });
+}
+function saveGoodThings() {
+  const dateStr = document.getElementById('good-date').value;
+  if (!dateStr) return;
+  const all = Array.from(document.querySelectorAll('.good-things textarea')).map(t => t.value);
+  localStorage.setItem(storageKey(dateStr), JSON.stringify(all));
+}
+
+const goodToggle = document.getElementById('good-things-toggle');
+const goodBody = document.getElementById('good-things-body');
+goodToggle.addEventListener('click', () => {
+  goodToggle.classList.toggle('open');
+  goodBody.classList.toggle('open');
+});
+
+const goodDate = document.getElementById('good-date');
+const goodToday = document.getElementById('good-today');
+goodDate.value = fmtDate(new Date());
+loadGoodThings(goodDate.value);
+goodDate.addEventListener('change', () => loadGoodThings(goodDate.value));
+goodToday.addEventListener('click', () => {
+  goodDate.value = fmtDate(new Date());
+  loadGoodThings(goodDate.value);
+});
+document.querySelectorAll('.good-things textarea').forEach(ta => {
+  ta.addEventListener('blur', saveGoodThings);
+});
+
+/* ======================== 初始化 ======================== */
+renderJournalHistory();
+renderPhq4History();
+drawPhq4Chart();
+window.addEventListener('resize', drawPhq4Chart);
+</script>
+
+</body>
+</html>
