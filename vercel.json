@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/chat", "destination": "/api/index" },
+    { "source": "/phq4", "destination": "/api/index" }
+  ]
+}

@@ -1,0 +1,10 @@
+# 这些文件别打包到 Vercel 部署里(本地用,但不该作为公网静态文件暴露)
+__pycache__
+.venv
+*.pyc
+*.pyo
+start.command
+Procfile
+Dockerfile
+.git
+.DS_Store
